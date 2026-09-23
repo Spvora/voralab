@@ -19,7 +19,7 @@ cp .env.example .env   # fill in E2E_PLANE_EMAIL / E2E_PLANE_PASSWORD (+ tokens 
 npm test                # everything that is configured
 npm run test:widget     # GM-* widget states (needs E2E_GIT_META_TOKEN + connection id)
 npm run test:api        # GA-* v2 sync contract (needs E2E_GIT_META_TOKEN + connection id)
-npm run test:live       # GL-* real GitHub → silo → widget (needs E2E_GITHUB_TOKEN)
+npm run test:live       # GL-*/GLB-*/BB-* real GitHub/GitLab/Bitbucket → silo → widget (needs provider tokens)
 npm run test:smoke      # GS-01 read-only check of pre-existing data (login only)
 npm run check:types
 E2E_RUN_KNOWN_BUGS=1 npx playwright test -g "GM-07|GL-11"   # reproduce the quarantined bugs (video on failure)
@@ -33,6 +33,7 @@ Specs skip themselves (not fail) when their inputs are missing:
 | `tests/git-meta.widget.spec.ts`   | Plane login, project env, `E2E_GIT_META_TOKEN` (`git.meta` OAuth scope) |
 | `tests/git-meta.api.spec.ts`      | same as widget                                                        |
 | `tests/git-meta.github-live.spec.ts` | Plane login, project env, `E2E_GITHUB_TOKEN` with contents + PR write |
+| `tests/git-meta.provider-live.spec.ts` | Plane login, project env, `E2E_GITLAB_TOKEN`+`E2E_GITLAB_PROJECT` and/or `E2E_BITBUCKET_APP_PASSWORD`+`E2E_BITBUCKET_REPO` |
 
 ## Coverage
 
@@ -50,6 +51,9 @@ Specs skip themselves (not fail) when their inputs are missing:
 - **GL-01..12** live GitHub lifecycle: push, open → approve → merge, close → reopen, draft,
   PR-title-only link + follow-up push race, force-push, branch delete, loose commit, unrelated push,
   PR/commit shared by two work items, merge + delete on a shared PR, close + delete.
+- **GLB-01..08 / BB-01..08** the same lifecycle on GitLab Cloud (merge requests) and Bitbucket Cloud
+  (pull requests): push, open → merge, close → reopen (Bitbucket: close only, reopen recorded as
+  untested), draft, title-only link + follow-up push, branch delete, shared by two items, close + delete.
 
 Everything the live suite creates is prefixed with the work-item ref (`GITMETAQA-<n>-live-*`) and
 branches are deleted in `afterAll`; PRs stay for inspection.
