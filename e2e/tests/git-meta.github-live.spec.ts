@@ -313,7 +313,7 @@ test.describe("Git Meta — live GitHub", { tag: ["@git-meta", "@live", "@genera
     // Observed on silo.runway: the item linked only via PR_TITLE loses its branch card on branch
     // deletion (branches: [] and the merged PR becomes loose) while the BRANCH_NAME item keeps a
     // Deleted card. Intended behavior is a Deleted card on both.
-    test.fixme();
+    test.fixme(!process.env.E2E_RUN_KNOWN_BUGS, "quarantined @known-bug; set E2E_RUN_KNOWN_BUGS=1 to reproduce");
     const a = await gitMetaTarget.createWorkItem();
     const b = await gitMetaTarget.createWorkItem();
     const branch = `${a.ref}-live-multi-merge`;

@@ -22,6 +22,7 @@ npm run test:api        # GA-* v2 sync contract (needs E2E_GIT_META_TOKEN + conn
 npm run test:live       # GL-* real GitHub → silo → widget (needs E2E_GITHUB_TOKEN)
 npm run test:smoke      # GS-01 read-only check of pre-existing data (login only)
 npm run check:types
+E2E_RUN_KNOWN_BUGS=1 npx playwright test -g "GM-07|GL-11"   # reproduce the quarantined bugs (video on failure)
 ```
 
 Specs skip themselves (not fail) when their inputs are missing:

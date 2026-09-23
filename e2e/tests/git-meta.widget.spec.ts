@@ -238,7 +238,7 @@ test.describe("Git Meta widget", { tag: ["@git-meta", "@widget", "@generated"] }
   }) => {
     // Observed on silo.runway: 60 seeded commits → "60 commits", 15 rendered after Show more,
     // but no "View all commits" link although has_more is true and branch.url is set.
-    test.fixme();
+    test.fixme(!process.env.E2E_RUN_KNOWN_BUGS, "quarantined @known-bug; set E2E_RUN_KNOWN_BUGS=1 to reproduce");
     // COMMIT_PAGE_SIZE is server-side; seed comfortably past it so `has_more` is true.
     const item = await gitMetaTarget.createWorkItem();
     const repo = seedRepository(gitMetaTarget.connectionId);
