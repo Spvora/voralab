@@ -1,4 +1,4 @@
-import type { Locator, Page } from "@playwright/test";
+import { expect, type Locator, type Page } from "@playwright/test";
 
 /**
  * Page object for the work-item "Development" widget (Git Meta, plane-ee #9200 / #9730).
@@ -116,8 +116,12 @@ export class GitMetaWidgetPage {
     return this.branchCard(branchName).getByRole("link", { name: /\b[0-9a-f]{7}\b/ });
   }
 
+  /** The PR row is the link whose "#N" is its own number; commit rows may quote "#N" in their message. */
   pullRequestRow(number: string | number): Locator {
-    return this.content().getByRole("link", { name: new RegExp(`#${number}\\b`) });
+    return this.content()
+      .getByRole("link", { name: new RegExp(`^#${number}\\b`) })
+      .or(this.content().locator(`a[href$="/pull/${number}"], a[href$="/merge_requests/${number}"], a[href$="/pull-requests/${number}"]`))
+      .first();
   }
 
   pullRequestStatusPill(number: string | number, status: GitMetaPrStatus): Locator {
@@ -167,5 +171,25 @@ export class GitMetaWidgetPage {
       this.page.waitForResponse((response) => response.url().includes("/git-meta/") && response.request().method() === "GET"),
       this.page.reload(),
     ]);
+  }
+
+  /**
+   * Provider → silo → Plane propagation is asynchronous and the widget does not poll, so after a
+   * mutation reload the page until `locator` (optionally with a branch card expanded) is present.
+   */
+  async reloadUntilVisible(locator: Locator, options: { timeout: number; branch?: string }): Promise<void> {
+    await expect
+      .poll(
+        async () => {
+          await this.page.reload();
+          await this.header().waitFor({ state: "visible", timeout: 15_000 }).catch(() => undefined);
+          await this.expandIfCollapsed().catch(() => undefined);
+          if (options.branch) await this.expandBranchIfCollapsed(options.branch).catch(() => undefined);
+          return (await locator.count()) > 0;
+        },
+        { timeout: options.timeout, intervals: [5_000] }
+      )
+      .toBeTruthy();
+    await expect(locator).toBeVisible();
   }
 }
