@@ -195,7 +195,8 @@ export class Bitbucket implements GitProvider {
   }
 
   async closePull(number: number) {
-    await this.call("POST", `/pullrequests/${number}/decline`);
+    // Bitbucket rejects a JSON POST with no body (400); an empty object is required.
+    await this.call("POST", `/pullrequests/${number}/decline`, {});
   }
 
   async reopenPull(): Promise<void> {
