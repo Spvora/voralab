@@ -57,3 +57,13 @@ Specs skip themselves (not fail) when their inputs are missing:
 
 Everything the live suite creates is prefixed with the work-item ref (`GITMETAQA-<n>-live-*`) and
 branches are deleted in `afterAll`; PRs stay for inspection.
+
+## Run from GitHub Actions
+
+`.github/workflows/git-meta-e2e.yml` runs the suite on demand: **Actions → Git Meta E2E → Run workflow**, pick a
+lane (`all`/`smoke`/`widget`/`api`/`live`), an optional `-g` filter, and whether to include the `@known-bug` cases.
+Add these repository secrets first (Settings → Secrets and variables → Actions): `E2E_PLANE_EMAIL`,
+`E2E_PLANE_PASSWORD` (required), and optionally `E2E_GIT_META_TOKEN`, `E2E_GITHUB_TOKEN`, `E2E_GITLAB_TOKEN`,
+`E2E_BITBUCKET_APP_PASSWORD` (+ `E2E_BITBUCKET_USERNAME` for app passwords). Non-secret targets (URLs, workspace,
+project, repos) default to the silo.runway values and can be overridden with repository *variables* of the same
+name. The HTML report, screenshots, videos and traces are uploaded as the `git-meta-e2e-report-<run>` artifact.
