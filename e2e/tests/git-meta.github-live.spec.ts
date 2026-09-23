@@ -299,7 +299,7 @@ test.describe("Git Meta — live GitHub", { tag: ["@git-meta", "@live", "@genera
       await expect(gitMeta.header()).toBeVisible({ timeout: LONG });
       await gitMeta.expandIfCollapsed();
       await expect(gitMeta.branchCard(branch)).toBeVisible({ timeout: LONG });
-      await expect(gitMeta.pullRequestRow(pr.number)).toBeVisible({ timeout: LONG });
+      await gitMeta.reloadUntilVisible(gitMeta.pullRequestRow(pr.number), { timeout: LONG, branch });
       await expect(gitMeta.commitRow(sha)).toBeVisible();
       // Each item sees the shared branch exactly once — no duplicate card per reference
       await expect(gitMeta.branchCard(branch)).toHaveCount(1);

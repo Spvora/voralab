@@ -173,7 +173,9 @@ for (const { kind, label, code } of PROVIDERS) {
         await expect(gitMeta.header()).toBeVisible({ timeout: LONG });
         await gitMeta.expandIfCollapsed();
         await expect(gitMeta.branchCard(branch)).toBeVisible({ timeout: LONG });
-        await expect(gitMeta.pullRequestRow(pr.number)).toBeVisible({ timeout: LONG });
+        // The push and request webhooks arrive independently; the widget only revalidates on
+        // focus/reload, so poll with reloads until the request has been attached.
+        await gitMeta.reloadUntilVisible(gitMeta.pullRequestRow(pr.number), { timeout: LONG, branch });
         await expect(gitMeta.commitRow(sha)).toBeVisible();
         await expect(gitMeta.branchCard(branch)).toHaveCount(1);
       }
