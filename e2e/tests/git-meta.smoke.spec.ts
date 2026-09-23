@@ -6,7 +6,7 @@ import { test, expect } from "../fixtures/git-meta.fixture";
  */
 const SMOKE = {
   workItemId: process.env.E2E_SMOKE_WORK_ITEM_ID ?? "7811fda7-24b2-4a01-bf62-4c29d6022822",
-  headerCount: process.env.E2E_SMOKE_HEADER_COUNT ?? "6",
+  headerCount: process.env.E2E_SMOKE_HEADER_COUNT ?? "7",
   repo: process.env.E2E_SMOKE_REPO ?? "Spvora/voralab",
   branch: process.env.E2E_SMOKE_BRANCH ?? "xyz",
   pr: Number(process.env.E2E_SMOKE_PR ?? 16),
