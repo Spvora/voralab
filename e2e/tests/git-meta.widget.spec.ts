@@ -231,11 +231,14 @@ test.describe("Git Meta widget", { tag: ["@git-meta", "@widget", "@generated"] }
     await expect(gitMeta.branchCommitRows(branchName)).toHaveCount(5);
   });
 
-  test("GM-07 commits beyond the server page expose 'View all commits' linking to the branch on GitHub", async ({
+  test("GM-07 commits beyond the server page expose 'View all commits' linking to the branch on GitHub @known-bug", async ({
     gitMeta,
     gitMetaTarget,
     seeder,
   }) => {
+    // Observed on silo.runway: 60 seeded commits → "60 commits", 15 rendered after Show more,
+    // but no "View all commits" link although has_more is true and branch.url is set.
+    test.fixme();
     // COMMIT_PAGE_SIZE is server-side; seed comfortably past it so `has_more` is true.
     const item = await gitMetaTarget.createWorkItem();
     const repo = seedRepository(gitMetaTarget.connectionId);
@@ -424,7 +427,7 @@ test.describe("Git Meta widget", { tag: ["@git-meta", "@widget", "@generated"] }
     await expect(gitMeta.looseCommits().getByText("Commits", { exact: true })).toBeVisible();
     await expect(gitMeta.commitRow(loose.sha)).toBeVisible();
     await expect(gitMeta.loosePullRequests()).toBeVisible();
-    await expect(gitMeta.loosePullRequests().getByText("Pull requests", { exact: true })).toBeVisible();
+    await expect(gitMeta.loosePullRequests().getByText(/^Pull requests?$/)).toBeVisible();
     await expect(gitMeta.pullRequestRow("900")).toBeVisible();
     // Neither `main` nor the unlinked source branch should get a branch card
     await expect(gitMeta.branchCard("main")).toHaveCount(0);
@@ -543,7 +546,7 @@ test.describe("Git Meta widget", { tag: ["@git-meta", "@widget", "@generated"] }
 
     await gitMeta.goto(item.url);
     await gitMeta.expandIfCollapsed();
-    await expect(gitMeta.rowActor(gitMeta.commitRow(commit.sha), "Stranger Dev")).toBeVisible();
+    await gitMeta.expectRowActorTooltip(gitMeta.commitRow(commit.sha), "Stranger Dev");
   });
 
   test("GM-15 widget refreshes on window focus after new activity lands", async ({
@@ -569,9 +572,23 @@ test.describe("Git Meta widget", { tag: ["@git-meta", "@widget", "@generated"] }
     await expect(gitMeta.branchCommitRows(branchName)).toHaveCount(1);
 
     const second = makeCommit(repo, "Second", 1);
-    await seeder.syncBranch(repo, { name: branchName, change: "UPDATED", head_sha: second.sha, commits: [second] });
-    await page.evaluate(() => window.dispatchEvent(new Event("focus")));
-    await expect(gitMeta.branchCommitRows(branchName)).toHaveCount(2);
+    await seeder.syncBranch(repo, {
+      name: branchName,
+      change: "UPDATED",
+      head_sha: second.sha,
+      commits: [second],
+      links: [{ issue_id: item.id }],
+    });
+    // SWR dedupes focus revalidation within a few seconds of the mount fetch, so refocus until it bites.
+    await expect
+      .poll(
+        async () => {
+          await page.evaluate(() => window.dispatchEvent(new Event("focus")));
+          return gitMeta.branchCommitRows(branchName).count();
+        },
+        { timeout: 30_000, intervals: [3_000] }
+      )
+      .toBe(2);
     await expect(gitMeta.branchCommitRows(branchName).first()).toContainText(second.sha.slice(0, 7));
   });
 

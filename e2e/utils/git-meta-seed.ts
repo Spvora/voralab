@@ -13,8 +13,8 @@
  *
  * Required env (all read lazily so unrelated specs never fail on import):
  *   E2E_API_URL                      – API origin, e.g. https://silo.runway.plane.town
- *   E2E_GIT_META_TOKEN               – OAuth bearer token carrying the `git.meta` scope, issued to an
- *                                      app with IntegrationPermissions.CREATE on the workspace
+ *   E2E_GIT_META_TOKEN               – OAuth bearer token carrying the `git.meta` scope, or a workspace
+ *                                      API key (`plane_api_…`, sent as X-API-Key)
  *   E2E_GIT_META_WORKSPACE_CONNECTION_ID – a GitHub WorkspaceConnection id in the target workspace
  */
 
@@ -59,7 +59,8 @@ export type SeedPullRequest = {
   number: string;
   title: string;
   status: GitPullRequestStatus;
-  review_state?: GitReviewState | null;
+  /** Wire shape: the review decision travels inside the provider blob. */
+  status_metadata?: { review_state?: GitReviewState | null; [key: string]: unknown };
   opened_at: string;
   closed_at?: string | null;
   url?: string;
@@ -186,9 +187,10 @@ export const makeCommit = (
 
 export const makePullRequest = (
   repo: SeedRepository,
-  overrides: Partial<SeedPullRequest> & { number: string; title: string }
+  { review_state, ...overrides }: Partial<SeedPullRequest> & { number: string; title: string; review_state?: GitReviewState }
 ): SeedPullRequest => ({
   status: "OPEN",
+  ...(review_state ? { status_metadata: { review_state } } : {}),
   opened_at: minutesAgo(120),
   target_branch: "preview",
   url: pullRequestUrl(repo, overrides.number),
@@ -198,6 +200,12 @@ export const makePullRequest = (
   actor: GITHUB_ACTOR,
   ...overrides,
 });
+
+/** API keys are recognised by prefix; anything else is treated as an OAuth bearer token. */
+export function gitMetaAuthHeaders(token: string | undefined): Record<string, string> {
+  if (!token) return { Authorization: "Bearer " };
+  return token.startsWith("plane_api_") ? { "X-API-Key": token } : { Authorization: `Bearer ${token}` };
+}
 
 export class GitMetaSeeder {
   constructor(
@@ -209,7 +217,7 @@ export class GitMetaSeeder {
   async syncRaw(payload: GitMetaSyncPayload, token = gitMetaEnv().token) {
     return this.request.post(`${gitMetaEnv().apiUrl}/api/v2/workspaces/${this.workspaceSlug}/git-meta/`, {
       data: payload,
-      headers: { Authorization: `Bearer ${token ?? ""}`, "Content-Type": "application/json" },
+      headers: { ...gitMetaAuthHeaders(token), "Content-Type": "application/json" },
     });
   }
 

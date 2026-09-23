@@ -165,6 +165,16 @@ export class GitMetaWidgetPage {
     return row.getByText(displayName, { exact: false }).or(row.getByRole("img", { name: displayName }));
   }
 
+  /**
+   * An actor without an avatar image renders only its initial; the full name lives in the hover
+   * tooltip. Hover the row's trailing avatar and assert the tooltip names the actor.
+   */
+  async expectRowActorTooltip(row: Locator, displayName: string): Promise<void> {
+    const avatar = row.getByText(displayName.charAt(0), { exact: true }).last();
+    await avatar.hover();
+    await expect(this.page.getByText(displayName, { exact: true })).toBeVisible();
+  }
+
   /** Reload the work item and wait for the widget's read request to settle. */
   async reloadAndWaitForGitMeta(): Promise<void> {
     await Promise.all([

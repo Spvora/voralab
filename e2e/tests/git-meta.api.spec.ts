@@ -11,6 +11,7 @@ import {
   GITHUB_ACTOR,
   branchUrl,
   fakeSha,
+  gitMetaAuthHeaders,
   gitMetaEnv,
   makeCommit,
   makePullRequest,
@@ -67,16 +68,18 @@ test.describe("Git Meta API", { tag: ["@tier1", "@git-meta", "@api", "@generated
       minutesAgo(10)
     );
 
+    // `links` is authoritative per event: a branch sync that omits it unlinks the item (BRANCH_NAME
+    // provenance), exactly as silo resends the name-derived links on every push.
     const rewritten = makeCommit(repo, "Original (amended)", 1);
     await seeder.syncBranch(
       repo,
-      { name: branchName, change: "FORCED", head_sha: rewritten.sha, commits: [rewritten] },
+      { name: branchName, change: "FORCED", head_sha: rewritten.sha, commits: [rewritten], links: [{ issue_id: item.id }] },
       minutesAgo(1)
     );
     // Replay the force-push
     await seeder.syncBranch(
       repo,
-      { name: branchName, change: "FORCED", head_sha: rewritten.sha, commits: [rewritten] },
+      { name: branchName, change: "FORCED", head_sha: rewritten.sha, commits: [rewritten], links: [{ issue_id: item.id }] },
       minutesAgo(1)
     );
 
@@ -231,7 +234,7 @@ test.describe("Git Meta API", { tag: ["@tier1", "@git-meta", "@api", "@generated
   test("GA-10 actors upsert endpoint returns the actor with member linkage", async ({ api, gitMetaTarget }) => {
     const { apiUrl, token } = gitMetaEnv();
     const response = await api.request.post(`${apiUrl}/api/v2/workspaces/${gitMetaTarget.workspaceSlug}/git-meta/actors/`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: gitMetaAuthHeaders(token),
         data: { ...GITHUB_ACTOR, external_id: `e2e-actor-${fakeSha().slice(0, 8)}` },
       });
     expect(response.ok(), await response.text()).toBeTruthy();
