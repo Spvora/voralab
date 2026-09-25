@@ -1,0 +1,82 @@
+name: Git Meta E2E
+
+on:
+  workflow_dispatch:
+    inputs:
+      lane:
+        description: "Which lane to run"
+        type: choice
+        default: all
+        options: [all, smoke, widget, api, live]
+      grep:
+        description: "Optional extra filter, e.g. GL-03|BB-0"
+        type: string
+        default: ""
+      known_bugs:
+        description: "Also run the quarantined @known-bug cases (GM-07, GL-11)"
+        type: boolean
+        default: false
+
+concurrency:
+  group: git-meta-e2e
+  cancel-in-progress: false
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    defaults:
+      run:
+        working-directory: e2e
+    env:
+      E2E_WEB_URL: ${{ vars.E2E_WEB_URL || 'https://silo.runway.plane.town' }}
+      E2E_API_URL: ${{ vars.E2E_API_URL || 'https://silo.runway.plane.town' }}
+      E2E_PLANE_EMAIL: ${{ secrets.E2E_PLANE_EMAIL }}
+      E2E_PLANE_PASSWORD: ${{ secrets.E2E_PLANE_PASSWORD }}
+      E2E_GIT_META_WORKSPACE_SLUG: ${{ vars.E2E_GIT_META_WORKSPACE_SLUG || 'teams-test' }}
+      E2E_GIT_META_PROJECT_ID: ${{ vars.E2E_GIT_META_PROJECT_ID || '93a03995-9da1-4b13-90f4-d15cb8af2789' }}
+      E2E_GIT_META_PROJECT_IDENTIFIER: ${{ vars.E2E_GIT_META_PROJECT_IDENTIFIER || 'GITMETAQA' }}
+      E2E_GIT_META_WORKSPACE_CONNECTION_ID: ${{ vars.E2E_GIT_META_WORKSPACE_CONNECTION_ID || '353357cd-3482-4901-900c-825b92807f0c' }}
+      E2E_GIT_META_TOKEN: ${{ secrets.E2E_GIT_META_TOKEN }}
+      E2E_GITHUB_TOKEN: ${{ secrets.E2E_GITHUB_TOKEN }}
+      E2E_GITHUB_REPO: ${{ vars.E2E_GITHUB_REPO || github.repository }}
+      E2E_GITHUB_BASE: main
+      E2E_GITLAB_TOKEN: ${{ secrets.E2E_GITLAB_TOKEN }}
+      E2E_GITLAB_PROJECT: ${{ vars.E2E_GITLAB_PROJECT || 'saurabh-group1/testing-project' }}
+      E2E_GITLAB_BASE: main
+      E2E_GITLAB_HOST: https://gitlab.com
+      E2E_BITBUCKET_APP_PASSWORD: ${{ secrets.E2E_BITBUCKET_APP_PASSWORD }}
+      E2E_BITBUCKET_USERNAME: ${{ secrets.E2E_BITBUCKET_USERNAME }}
+      E2E_BITBUCKET_REPO: ${{ vars.E2E_BITBUCKET_REPO || 'sample_22/testing_repo' }}
+      E2E_BITBUCKET_BASE: main
+      E2E_RUN_KNOWN_BUGS: ${{ inputs.known_bugs && '1' || '' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run suite
+        run: |
+          ARGS=(--reporter=list,html --workers=1)
+          if [ "${{ inputs.lane }}" != "all" ]; then ARGS+=(--grep "@${{ inputs.lane }}"); fi
+          if [ -n "${{ inputs.grep }}" ]; then ARGS+=(-g "${{ inputs.grep }}"); fi
+          npx playwright test "${ARGS[@]}"
+
+      - name: Upload report, videos and traces
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: git-meta-e2e-report-${{ github.run_number }}
+          path: |
+            e2e/playwright-report
+            e2e/test-results
+          if-no-files-found: ignore
+          retention-days: 14
